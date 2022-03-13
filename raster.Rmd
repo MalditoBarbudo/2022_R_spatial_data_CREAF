@@ -1,0 +1,376 @@
+---
+title: "Raster Data"
+subtitle: ""
+author: "Víctor Granda"
+institute: "Ecosystem Modelling Facility, CREAF"
+date: "2022/03/15"
+output:
+  xaringan::moon_reader:
+    css: [resources/css/custom.css, default-fonts]
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+    seal: false
+editor_options: 
+  chunk_output_type: console
+---
+class: title-slide
+
+```{r setup, include=FALSE}
+options(
+  htmltools.dir.version = FALSE,
+  width = 100
+)
+knitr::opts_chunk$set(fig.width = 8, fig.height = 5, fig.align = 'center')
+```
+
+
+# Raster data
+
+## Víctor Granda
+
+### Ecosystem Modelling Facility
+
+### 15/03/2022
+
+<img class="logo-title" src="resources/img/emf_logo.svg" width=300>
+
+
+---
+
+class: code70
+layout: true
+
+<div class=my-header>
+    <img class="emf-logo" src="resources/img/emf_logo.svg">
+</div>
+
+# Raster data
+
+<div class=my-footer></div>
+
+---
+
+Raster data consist of a matrix of pixels (or cells) organized into rows and
+columns (also know as grid), where each pixel contains a value representing
+information (such an attribute like in the simple features, i.e. biomass).
+
+
+---
+
+## R packages
+
+There are several packages to work with raster data:
+
+  - `raster`: original and old standard to work with raster data in R.
+  - `terra`: modern standard to work with raster data in R.
+  - `stars`: work with raster, and also datacubes (more than 3 dimensions).
+  
+In this session we will explore the `terra` package, as it has most of the
+most common tools to work with raster data implemented, as well as a nice
+online documentation (https://rspatial.org/terra/pkg/index.html)
+
+---
+
+## `terra` package
+
+```{r terra_inst, eval=FALSE}
+install.package(terra)
+```
+
+---
+
+## Read data
+
+```{r terra_read}
+library(terra)
+
+lidar_ab_raster <- rast('lidar_ab_raster.tif')
+lidar_ab_raster
+```
+
+---
+
+## Layers
+
+```{r terra_layers}
+lidar_dbh_raster <- rast('lidar_dbh_raster.tif')
+lidar_raster <- c(lidar_ab_raster, lidar_dbh_raster)
+lidar_raster
+```
+
+---
+
+## Write data
+
+```{r terra_write}
+writeRaster(lidar_raster, 'lidar_raster.tif', overwrite = TRUE)
+rast('lidar_raster.tif')
+```
+
+---
+
+## CRS
+
+CRS is a framework used to precisely measure locations on the surface of the
+Earth as coordinates.
+
+```{r terra_crs}
+crs(lidar_raster)
+```
+
+---
+
+## transform CRS
+
+```{r terra_crs_2}
+lidar_raster <- terra::project(lidar_raster, 'epsg:3043')
+lidar_raster
+```
+
+---
+
+## Aggregate / Dissaggregate
+
+.pull-left[
+
+Aggregate (less resolution = bigger pixel)
+
+```{r raster_aggregate}
+terra::aggregate(lidar_raster, fact = 2, fun = 'max')
+```
+
+]
+
+.pull-right[
+
+Dissaggregate (more resolution = smaller pixel)
+
+```{r raster_dissaggregate}
+terra::disagg(lidar_raster, fact = 2, method = 'bilinear')
+```
+
+]
+
+---
+
+## Extract values from vector data
+
+```{r raster_load_vector}
+library(sf)
+lidar_data_sf <- st_read('lidar_data.gpkg', quiet = TRUE) %>%
+  st_transform(crs = 3043)
+lidar_data_terra <- vect(lidar_data_sf)
+lidar_data_terra
+```
+
+---
+
+## Extract values from vector data
+
+```{r raster_extract_vector}
+terra::extract(lidar_raster, lidar_data_terra, mean, na.rm = TRUE)
+```
+
+---
+
+## Extract values from vector data
+
+```{r raster_extract_vector_2}
+lidar_centroids <- st_read('lidar_data.gpkg', quiet = TRUE) %>%
+  st_transform(crs = 3043) %>%
+  st_centroid() %>%
+  vect()
+terra::extract(lidar_raster, lidar_centroids, method = 'simple')
+```
+
+---
+
+## Crop and mask
+
+```{r raster_crop}
+lidar_raster_alt_camp <- terra::crop(lidar_raster, lidar_data_terra[1,])
+plot(lidar_raster_alt_camp)
+```
+
+---
+
+## Crop and mask
+
+```{r raster_mask}
+lidar_raster_alt_camp_masked <-
+  terra::crop(lidar_raster, lidar_data_terra[1,], mask = TRUE)
+plot(lidar_raster_alt_camp_masked)
+```
+
+---
+
+## Raster algebra
+
+```{r raster_algebra}
+lidar_raster + c(1000, -1000)
+```
+
+---
+
+## Raster algebra
+
+```{r raster_algebra_2}
+c(lidar_raster, lidar_ab_raster + lidar_dbh_raster)
+```
+
+---
+
+## Pixels algebra
+
+```{r raster_algebra_3}
+global(lidar_raster, "mean", na.rm = TRUE)
+```
+
+---
+
+## Plot
+
+```{r raster_plot}
+plot(lidar_raster, axes= FALSE, col = rainbow(25))
+```
+
+---
+
+## `stars` package
+
+```{r stars_package, eval = FALSE}
+install.packages('stars')
+```
+
+---
+
+## `stars` package
+
+```{r stars_read}
+library(stars)
+lidar_raster_stars <- read_stars('lidar_raster.tif')
+lidar_raster_stars
+```
+
+---
+
+## Bands and attributes
+
+```{r split_stars}
+lidar_raster <- split(lidar_raster_stars)
+```
+
+---
+
+## Bands and attributes
+
+```{r merge_stars}
+merge(lidar_raster)
+```
+
+---
+
+## Write stars objects
+
+```{r write_stars}
+write_stars(lidar_raster_stars, 'lidar_raster.nc')
+read_stars('lidar_raster.nc')
+```
+
+---
+
+## CRS transformations
+
+```{r crs_stars}
+st_crs(lidar_raster_stars)
+```
+
+
+---
+
+## CRS transformations
+
+```{r crs_transform_stars}
+st_transform(lidar_raster_stars, crs = 3043)
+lidar_raster_stars <- st_warp(lidar_raster_stars, crs = 3043)
+```
+
+---
+
+## Aggregate / Dissaggregate
+
+```{r}
+reference_grid <- st_as_stars(st_bbox(lidar_raster_stars), dx = 200, dy = 200)
+plot(st_warp(lidar_raster_stars, reference_grid))
+```
+
+---
+
+## Aggregate / Dissaggregate
+
+```{r}
+reference_grid <- st_as_stars(st_bbox(lidar_raster_stars), dx = 10000, dy = 10000)
+plot(st_warp(lidar_raster_stars, reference_grid))
+```
+
+---
+
+## Extract values from vector data
+
+```{r stars_vector}
+lidar_centroids <- st_centroid(lidar_data_sf)
+
+st_extract(lidar_raster_stars, lidar_centroids)
+```
+
+
+---
+
+## Extract values from vector data
+
+```{r stars_vector_2}
+st_extract(lidar_raster_stars, lidar_centroids) %>%
+  st_as_sf()
+```
+
+---
+
+## Extract values from vector data
+
+```{r stars_vector_3}
+aggregate(lidar_raster_stars, lidar_data_sf[1,], mean, na.rm = TRUE) %>%
+  st_as_sf()
+```
+
+---
+
+## Crop
+
+```{r stars_crop}
+plot(st_crop(lidar_raster_stars, lidar_data_sf[1,]))
+```
+
+---
+
+## Raster algebra
+
+```{r stars_algebra}
+lidar_raster_stars*5
+```
+
+
+---
+
+## ggplot2
+
+```{r stars_ggplot}
+library(ggplot2)
+ab_stars <- slice(lidar_raster_stars, band, 1)
+ggplot() +
+  geom_stars(data = ab_stars) +
+  scale_fill_fermenter(palette = 2, direction = 1, type = 'seq', na.value = 'transparent')
+```
+

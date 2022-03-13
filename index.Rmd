@@ -1,0 +1,618 @@
+---
+title: "Vector Data"
+subtitle: "Simple Features"
+author: "Víctor Granda"
+institute: "Ecosystem Modelling Facility, CREAF"
+date: "2022/03/14"
+output:
+  xaringan::moon_reader:
+    css: [default, resources/css/custom.css, default-fonts]
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+    seal: false
+editor_options: 
+  chunk_output_type: console
+---
+class: title-slide
+
+```{r setup, include=FALSE}
+options(
+  htmltools.dir.version = FALSE,
+  width = 100
+)
+knitr::opts_chunk$set(fig.width = 8, fig.height = 5, fig.align = 'center')
+```
+
+
+# Vector data
+
+## Víctor Granda
+
+### Ecosystem Modelling Facility
+
+### 14/03/2022
+
+<img class="logo-title" src="resources/img/emf_logo.svg" width=300>
+
+---
+
+class: code70
+layout: true
+
+<div class=my-header>
+    <img class="emf-logo" src="resources/img/emf_logo.svg">
+</div>
+
+# Simple features (sf)
+
+<div class=my-footer></div>
+
+---
+
+.center[
+```{r sf_package, echo = FALSE, out.width = 400}
+knitr::include_graphics("resources/img/sf_allison_horst.jpg")
+```
+]
+
+.right[
+.font80[(Illustration (c) by Allison Horst)]
+]
+
+Simple features are included in the [ISO 19125-1:2004](https://www.iso.org/standard/40114.html)
+standard. This standard decribes how real world objects are represented in computers, with
+special emphasis in spatial geometry.
+
+---
+
+## Dimensions
+
+Geometries are composed of points, coordinates in XY space (north-east, lat-long...):
+
+  - **XY**
+  - **XYZ** (Z = altitude)
+  - **XYM** (M = coordinate referring to the point, could be time or coordinates measuring error)
+  - **XYZM** (both, Z and M)
+
+And also can have attributes related to each geometry (think about things as
+biomass, temperature...)
+
+---
+
+## Geometry types
+
+  - **POINT**: zero-dimensional geometry containing a single point
+  - **LINESTRING**: sequence of points connected by straight, non-self intersecting
+  line pieces; one-dimensional geometry
+  - **POLYGON**: geometry with a positive area (two-dimensional); sequence of points
+  form a closed, non-self intersecting ring; the first ring denotes the exterior
+  ring, zero or more subsequent rings denote holes in this exterior ring
+  - **MULTIPOINT**: set of points; a MULTIPOINT is simple if no two Points in the
+  MULTIPOINT are equal
+  - **MULTILINESTRING**: set of linestrings
+  - **MULTIPOLYGON**: set of polygons
+  - **GEOMETRYCOLLECTION**: set of geometries of any type except GEOMETRYCOLLECTION
+
+---
+
+## Simple features in R
+
+1. "Ol'good" `sp` package. The standard in R for many years
+
+2. "New kid on the block" `sf` package. The "new" R standard for spatial simple
+features.
+
+---
+
+## `sf` package
+
+```{r install_sf, eval = FALSE}
+install.packages("sf")
+```
+
+---
+
+## `sf` package
+
+```{r sf_simple_example}
+library(sf)
+
+nc <- st_read(system.file("shape/nc.shp", package="sf"))
+```
+
+---
+
+## `sf` package
+
+```{r sf_simple_example_2}
+nc
+```
+
+---
+
+## `sf` package
+
+```{r sf_simple_example_3}
+class(nc)
+
+attr(nc, "sf_column")
+
+class(nc$geometry)
+
+class(nc$geometry[[1]])
+```
+
+---
+
+## read data
+
+```{r st_read}
+lidar_data <- st_read('lidar_data.gpkg', quiet = TRUE)
+
+lidar_data
+```
+
+---
+
+## quickly plot
+
+```{r quick_plot}
+plot(lidar_data)
+```
+
+---
+
+## it's a dataframe (tibble)!!!
+
+```{r filter}
+library(dplyr)
+valles_data <- lidar_data %>%
+  filter(poly_id == "Vallès Occidental")
+valles_data
+```
+
+---
+
+## save it
+
+```{r, echo=FALSE}
+invisible(file.remove('valles_data.gpkg'))
+```
+
+
+```{r write}
+st_write(valles_data, 'valles_data.gpkg')
+file.exists('valles_data.gpkg')
+```
+
+---
+
+## Back to read, but with a twist
+
+```{r read_limited}
+valles_wkt <- st_read('valles_data.gpkg', quiet = TRUE) %>%
+  st_geometry() %>%
+  st_as_text()
+
+valles_data_2 <- st_read('lidar_data.gpkg', wkt_filter = valles_wkt, quiet = TRUE)
+valles_data_2
+```
+
+---
+
+## Coordinate Reference System (crs)
+
+CRS is a framework used to precisely measure locations on the surface of the
+Earth as coordinates.
+
+
+```{r crs}
+st_crs(lidar_data)
+```
+
+---
+
+## CRS transformations
+
+```{r transform}
+lidar_data_utm <- st_transform(lidar_data, crs = 3043)
+st_crs(lidar_data_utm)
+```
+
+---
+
+## CRS transformations
+
+```{r transform_2}
+valles_data_utm <- st_transform(valles_data, crs = st_crs(lidar_data_utm))
+st_crs(valles_data_utm)
+```
+
+---
+
+## Geometrical operations
+
+```{r centroids}
+lidar_centroids <- st_centroid(lidar_data)
+lidar_centroids
+```
+
+---
+
+## Geometrical operations
+
+```{r distance}
+st_distance(lidar_centroids)
+```
+
+---
+
+## Geometrical operations
+
+```{r distance_2}
+st_distance(lidar_centroids[1,], lidar_centroids[42,])
+```
+
+---
+
+## Geometrical operations
+
+```{r intersects}
+st_intersects(lidar_centroids, lidar_data)
+```
+
+---
+
+## Geometrical operations
+
+```{r intersects_2}
+st_intersects(lidar_centroids, lidar_data, sparse = FALSE)
+```
+
+---
+
+## Geometrical operations
+
+  - `st_intersects`
+  - `st_touches`
+  - `st_within`
+  - `st_contains`
+  - `st_overlaps`
+  - `st_covers`
+  - ...
+
+All these returns a matrix (sparse or not) with all comparisions
+
+---
+
+## Geometrical operations
+
+```{r buffer}
+st_buffer(lidar_centroids, 1000)
+```
+
+---
+
+## Geometrical operations
+
+```{r convex_hull}
+convex_hull_counties <- st_convex_hull(lidar_data)
+convex_hull_counties
+```
+
+---
+
+## Geometrical operations
+
+```{r convex_hull_2}
+plot(convex_hull_counties)
+```
+
+---
+
+## Geometrical operations
+
+```{r union}
+lidar_centroids_multipoint <- st_union(lidar_centroids)
+lidar_centroids_multipoint
+```
+
+---
+
+## Geometrical operations
+
+```{r convex_hull_3}
+convex_hull_centroids <- st_convex_hull(lidar_centroids_multipoint)
+plot(convex_hull_centroids)
+plot(lidar_centroids, add = TRUE)
+```
+
+
+---
+
+## Geometrical operations
+
+```{r triangulate}
+# error
+st_triangulate(lidar_centroids)
+```
+
+---
+
+## Geometrical operations
+
+```{r triangulate_2}
+# no error, but maybe lat long is not the perfect here
+st_triangulate(lidar_centroids_multipoint)
+```
+
+---
+
+## Geometrical operations
+
+```{r triangulate_3}
+# utm works fine
+lidar_centroids_multipoint %>%
+  st_transform(crs = 3043) %>%
+  st_triangulate()
+```
+
+---
+
+## Geometrical operations
+
+```{r triangulate_4}
+# ummm, no plot???
+lidar_centroids_multipoint %>%
+  st_transform(crs = 3043) %>%
+  st_triangulate() %>%
+  plot()
+```
+
+---
+
+## Geometrical operations
+
+```{r triangulate_5}
+# ahh, we need to extract the collection, to be able to plot correctly
+lidar_centroids_multipoint %>%
+  st_transform(crs = 3043) %>%
+  st_triangulate() %>%
+  st_collection_extract() %>%
+  plot()
+```
+
+---
+
+## Geometrical operations
+
+```{r voronoi}
+# Is the same for voronoi polygons
+lidar_centroids_multipoint %>%
+  st_transform(crs = 3043) %>%
+  st_voronoi() %>%
+  st_collection_extract() %>%
+  plot()
+```
+
+
+---
+
+## Valid geometries
+
+```{r valid}
+sleeve_polygon <- st_polygon(list(cbind(c(0,1,1,1,0,0),c(0,0,1,0.6,1,0))))
+cross_polygon <- st_polygon(list(cbind(c(0,1,0,1,0),c(0,1,1,0,0))))
+st_is_valid(sleeve_polygon)
+st_is_valid(cross_polygon)
+st_is_valid(lidar_data[1,])
+```
+
+---
+
+## Valid geometries
+
+```{r valid2}
+valid_sleeve_polygon <- st_make_valid(sleeve_polygon)
+valid_cross_polygon <- st_make_valid(cross_polygon)
+st_is_valid(valid_sleeve_polygon)
+st_is_valid(valid_cross_polygon)
+```
+
+---
+
+## Valid geometries
+
+.pull-left[
+
+Invalid:
+
+```{r, echo = FALSE, fig.height=4}
+plot(sleeve_polygon)
+plot(sf::st_cast(sleeve_polygon, 'MULTIPOINT'), add = TRUE)
+plot(cross_polygon)
+plot(sf::st_cast(cross_polygon, 'MULTIPOINT'), add = TRUE)
+```
+]
+
+.pull-right[
+
+Valid:
+
+```{r, echo = FALSE, fig.height=4}
+plot(valid_sleeve_polygon)
+plot(sf::st_cast(st_collection_extract(valid_sleeve_polygon), 'MULTIPOINT'), add = TRUE)
+plot(valid_cross_polygon)
+plot(sf::st_cast(valid_cross_polygon, 'MULTIPOINT'), add = TRUE)
+```
+]
+
+---
+
+## Subsetting features
+
+```{r subsetting}
+lidar_data[1, "AB_average"]
+```
+
+---
+
+## Subsetting features
+
+```{r subsetting_2}
+lidar_data[1, "AB_average", drop = TRUE]
+```
+
+---
+
+## Subsetting features
+
+```{r subsetting_3}
+lidar_data[valles_data,]
+```
+
+---
+
+## Subsetting features
+
+```{r subsetting_4}
+lidar_data[valles_data, , op = st_contains]
+```
+
+---
+
+## Subsetting features
+
+```{r subsetting_5}
+lidar_data %>%
+  filter(lengths(st_contains(., valles_data)) > 0)
+```
+
+---
+
+## Joining feature sets
+
+```{r ifn_ab}
+ifn_ab <- st_read('ifn_data.gpkg', quiet = TRUE) %>%
+  as.data.frame() %>%
+  select(admin_region, basal_area_mean, -geom)
+ifn_ab
+```
+
+---
+
+## Joining feature sets
+
+By attributes
+
+```{r attribute_join}
+left_join(lidar_data, ifn_ab, by = c("poly_id" = "admin_region"))
+```
+
+---
+
+## Joining feature sets
+
+By attributes
+
+```{r attribute_join_2}
+left_join(lidar_data, ifn_ab, by = c("poly_id" = "admin_region")) %>%
+  select(poly_id, AB_lidar = AB_average, AB_ifn = basal_area_mean) %>%
+  mutate(difference = AB_ifn - AB_lidar)
+```
+
+---
+
+## Joining fetarure sets
+
+By geometries
+
+```{r geometry_join}
+ifn_data <- st_read('ifn_data.gpkg', quiet = TRUE) %>%
+  select(admin_region, basal_area_mean)
+
+ifn_data
+```
+
+---
+
+## Joining fetarure sets
+
+By geometries
+
+```{r geometry_join_2}
+st_join(lidar_data, ifn_data, join = st_intersects)
+```
+
+---
+
+## Joining fetarure sets
+
+By geometries
+
+```{r geometry_join_3}
+st_join(lidar_data, st_centroid(ifn_data), join = st_intersects)
+```
+
+---
+
+## Plotting
+
+```{r plotting}
+plot(lidar_data)
+```
+
+---
+
+## Plotting
+
+```{r plotting_2}
+plot(lidar_data, max.plot = 2)
+```
+
+---
+
+## Plotting
+
+```{r plotting_3}
+plot(lidar_data[, "AB_average"], axes = TRUE)
+```
+
+---
+
+## Plotting
+
+```{r plotting_4}
+plot(lidar_data[, "AB_average"], axes = TRUE, key.pos = 4)
+```
+
+---
+
+## Plotting
+
+```{r plotting_5}
+plot(lidar_data[, "AB_average"], axes = TRUE, key.pos = 4, graticule = TRUE)
+```
+
+---
+
+## Plotting
+
+```{r plotting_6}
+plot(lidar_data[, "AB_average"], axes = TRUE, key.pos = 4, graticule = TRUE, breaks = c(0, 15, 20, 40))
+```
+
+---
+
+## ggplot2
+
+```{r ggplot}
+library(ggplot2)
+lidar_data %>%
+  ggplot() +
+  geom_sf(aes(fill = AB_average)) +
+  scale_fill_fermenter(palette = 2, direction = 1, type = 'div')
+```

@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Raster Data</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Víctor Granda" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link href="libs/remark-css/default-fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="resources/css/custom.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+class: title-slide
+
+
+
+
+# Raster data
+
+## Víctor Granda
+
+### Ecosystem Modelling Facility
+
+### 15/03/2022
+
+&lt;img class="logo-title" src="resources/img/emf_logo.svg" width=300&gt;
+
+
+---
+
+class: code70
+layout: true
+
+&lt;div class=my-header&gt;
+    &lt;img class="emf-logo" src="resources/img/emf_logo.svg"&gt;
+&lt;/div&gt;
+
+# Raster data
+
+&lt;div class=my-footer&gt;&lt;/div&gt;
+
+---
+
+Raster data consist of a matrix of pixels (or cells) organized into rows and
+columns (also know as grid), where each pixel contains a value representing
+information (such an attribute like in the simple features, i.e. biomass).
+
+
+---
+
+## R packages
+
+There are several packages to work with raster data:
+
+  - `raster`: original and old standard to work with raster data in R.
+  - `terra`: modern standard to work with raster data in R.
+  - `stars`: work with raster, and also datacubes (more than 3 dimensions).
+  
+In this session we will explore the `terra` package, as it has most of the
+most common tools to work with raster data implemented, as well as a nice
+online documentation (https://rspatial.org/terra/pkg/index.html)
+
+---
+
+## `terra` package
+
+
+```r
+install.package(terra)
+```
+
+---
+
+## Read data
+
+
+```r
+library(terra)
+```
+
+```
+## terra 1.5.21
+```
+
+```
+## 
+## Attaching package: 'terra'
+```
+
+```
+## The following object is masked from 'package:ggplot2':
+## 
+##     arrow
+```
+
+```
+## The following object is masked from 'package:dplyr':
+## 
+##     src
+```
+
+```r
+lidar_ab_raster &lt;- rast('lidar_ab_raster.tif')
+lidar_ab_raster
+```
+
+```
+## class       : SpatRaster 
+## dimensions  : 660, 680, 1  (nrow, ncol, nlyr)
+## resolution  : 400, 400  (x, y)
+## extent      : 256000, 528000, 4488000, 4752000  (xmin, xmax, ymin, ymax)
+## coord. ref. : +proj=utm +zone=31 +ellps=GRS80 +units=m +no_defs 
+## source      : lidar_ab_raster.tif 
+## name        : lidar_ab_raster 
+## min value   :            0.84 
+## max value   :          86.988
+```
+
+---
+
+## Layers
+
+
+```r
+lidar_dbh_raster &lt;- rast('lidar_dbh_raster.tif')
+lidar_raster &lt;- c(lidar_ab_raster, lidar_dbh_raster)
+lidar_raster
+```
+
+```
+## class       : SpatRaster 
+## dimensions  : 660, 680, 2  (nrow, ncol, nlyr)
+## resolution  : 400, 400  (x, y)
+## extent      : 256000, 528000, 4488000, 4752000  (xmin, xmax, ymin, ymax)
+## coord. ref. : +proj=utm +zone=31 +ellps=GRS80 +units=m +no_defs 
+## sources     : lidar_ab_raster.tif  
+##               lidar_dbh_raster.tif  
+## names       : lidar_ab_raster, lidar_dbh_raster 
+## min values  :           0.840,            9.562 
+## max values  :          86.988,           40.000
+```
+
+---
+
+## Write data
+
+
+```r
+writeRaster(lidar_raster, 'lidar_raster.tif', overwrite = TRUE)
+rast('lidar_raster.tif')
+```
+
+```
+## class       : SpatRaster 
+## dimensions  : 660, 680, 2  (nrow, ncol, nlyr)
+## resolution  : 400, 400  (x, y)
+## extent      : 256000, 528000, 4488000, 4752000  (xmin, xmax, ymin, ymax)
+## coord. ref. : +proj=utm +zone=31 +ellps=GRS80 +units=m +no_defs 
+## source      : lidar_raster.tif 
+## names       : lidar_ab_raster, lidar_dbh_raster 
+## min values  :           0.840,            9.562 
+## max values  :          86.988,           40.000
+```
+
+---
+
+## CRS
+
+CRS is a framework used to precisely measure locations on the surface of the
+Earth as coordinates.
+
+
+```r
+crs(lidar_raster)
+```
+
+```
+## [1] "PROJCRS[\"unknown\",\n    BASEGEOGCRS[\"unknown\",\n        DATUM[\"Unknown_based_on_GRS80_ellipsoid\",\n            ELLIPSOID[\"GRS 1980\",6378137,298.257222101004,\n                LENGTHUNIT[\"metre\",1],\n                ID[\"EPSG\",7019]]],\n        PRIMEM[\"Greenwich\",0,\n            ANGLEUNIT[\"degree\",0.0174532925199433,\n                ID[\"EPSG\",9122]]]],\n    CONVERSION[\"Transverse Mercator\",\n        METHOD[\"Transverse Mercator\",\n            ID[\"EPSG\",9807]],\n        PARAMETER[\"Latitude of natural origin\",0,\n            ANGLEUNIT[\"degree\",0.0174532925199433],\n            ID[\"EPSG\",8801]],\n        PARAMETER[\"Longitude of natural origin\",3,\n            ANGLEUNIT[\"degree\",0.0174532925199433],\n            ID[\"EPSG\",8802]],\n        PARAMETER[\"Scale factor at natural origin\",0.9996,\n            SCALEUNIT[\"unity\",1],\n            ID[\"EPSG\",8805]],\n        PARAMETER[\"False easting\",500000,\n            LENGTHUNIT[\"metre\",1],\n            ID[\"EPSG\",8806]],\n        PARAMETER[\"False northing\",0,\n            LENGTHUNIT[\"metre\",1],\n            ID[\"EPSG\",8807]]],\n    CS[Cartesian,2],\n        AXIS[\"easting\",east,\n            ORDER[1],\n            LENGTHUNIT[\"metre\",1,\n                ID[\"EPSG\",9001]]],\n        AXIS[\"northing\",north,\n            ORDER[2],\n            LENGTHUNIT[\"metre\",1,\n                ID[\"EPSG\",9001]]]]"
+```
+
+---
+
+## transform CRS
+
+
+```r
+lidar_raster &lt;- terra::project(lidar_raster, 'epsg:3043')
+lidar_raster
+```
+
+```
+## class       : SpatRaster 
+## dimensions  : 660, 680, 2  (nrow, ncol, nlyr)
+## resolution  : 400, 400  (x, y)
+## extent      : 256000, 528000, 4488000, 4752000  (xmin, xmax, ymin, ymax)
+## coord. ref. : ETRS89 / UTM zone 31N (N-E) (EPSG:3043) 
+## source      : memory 
+## names       : lidar_ab_raster, lidar_dbh_raster 
+## min values  :           0.840,            9.562 
+## max values  :          86.988,           40.000
+```
+
+---
+
+## Aggregate / Dissaggregate
+
+.pull-left[
+
+Aggregate (less resolution = bigger pixel)
+
+
+```r
+terra::aggregate(lidar_raster, fact = 2, fun = 'max')
+```
+
+```
+## class       : SpatRaster 
+## dimensions  : 330, 340, 2  (nrow, ncol, nlyr)
+## resolution  : 800, 800  (x, y)
+## extent      : 256000, 528000, 4488000, 4752000  (xmin, xmax, ymin, ymax)
+## coord. ref. : ETRS89 / UTM zone 31N (N-E) (EPSG:3043) 
+## source      : memory 
+## names       : lidar_ab_raster, lidar_dbh_raster 
+## min values  :        2.962121,        13.256105 
+## max values  :          86.988,           40.000
+```
+
+]
+
+.pull-right[
+
+Dissaggregate (more resolution = smaller pixel)
+
+
+```r
+terra::disagg(lidar_raster, fact = 2, method = 'bilinear')
+```
+
+```
+## class       : SpatRaster 
+## dimensions  : 1320, 1360, 2  (nrow, ncol, nlyr)
+## resolution  : 200, 200  (x, y)
+## extent      : 256000, 528000, 4488000, 4752000  (xmin, xmax, ymin, ymax)
+## coord. ref. : ETRS89 / UTM zone 31N (N-E) (EPSG:3043) 
+## source      : memory 
+## names       : lidar_ab_raster, lidar_dbh_raster 
+## min values  :          0.9900,          10.5925 
+## max values  :        83.10046,         40.00000
+```
+
+]
+
+---
+
+## Extract values from vector data
+
+
+```r
+library(sf)
+lidar_data_sf &lt;- st_read('lidar_data.gpkg', quiet = TRUE) %&gt;%
+  st_transform(crs = 3043)
+lidar_data_terra &lt;- vect(lidar_data_sf)
+lidar_data_terra
+```
+
+```
+##  class       : SpatVector 
+##  geometry    : polygons 
+##  dimensions  : 42, 9  (geometries, attributes)
+##  extent      : 260445.7, 526467.6, 4488771, 4747976  (xmin, xmax, ymin, ymax)
+##  coord. ref. : ETRS89 / UTM zone 31N (N-E) (EPSG:3043) 
+##  names       :     poly_id poly_km2 AB_pixels AB_average AB_sd AB_min AB_max AB_km2 AB_km2_perc
+##  type        :       &lt;chr&gt;    &lt;num&gt;     &lt;int&gt;      &lt;num&gt; &lt;num&gt;  &lt;num&gt;  &lt;num&gt;  &lt;num&gt;       &lt;num&gt;
+##  values      :    Alt Camp    537.6    482120      16.69 8.207   0.01    100  192.8       35.87
+##                Alt Empordà     1357   1393054      20.31 8.609   0.01    100  557.2       41.07
+##                Alt Penedès    592.8    488554      17.66 9.036   0.01    100  195.4       32.97
+```
+
+---
+
+## Extract values from vector data
+
+
+```r
+terra::extract(lidar_raster, lidar_data_terra, mean, na.rm = TRUE)
+```
+
+```
+##    ID lidar_ab_raster lidar_dbh_raster
+## 1   1       15.246024         19.97279
+## 2   2       17.112733         20.13811
+## 3   3       16.668480         22.16253
+## 4   4       22.944323         21.61816
+## 5   5       23.772981         24.41451
+## 6   6       14.912623         21.48832
+## 7   7       15.089065         21.33481
+## 8   8       14.756012         19.87355
+## 9   9       13.563222         20.58355
+## 10 10       17.493316         21.91562
+## 11 11       17.376353         22.18640
+## 12 12       12.982869         19.38242
+## 13 13       17.507935         22.71191
+## 14 14       22.657111         22.42527
+## 15 15       28.354471         25.89686
+## 16 16       13.906846         20.03831
+## 17 17       13.558100         19.26940
+## 18 18       10.117328         20.26445
+## 19 19       23.841450         20.91880
+## 20 20       20.705040         22.35493
+## 21 21       20.138874         22.27460
+## 22 22       12.530326         19.37777
+## 23 23       10.137778         18.17510
+## 24 24       21.333362         22.68933
+## 25 25       13.999989         19.95389
+## 26 26       24.956757         23.97004
+## 27 27       12.659276         30.14195
+## 28 28       23.896821         23.02368
+## 29 29       12.191043         19.65077
+## 30 30       11.509191         20.23549
+## 31 31       28.484107         23.40328
+## 32 32        8.780663         19.60743
+## 33 33       12.261050         22.92624
+## 34 34       22.234338         22.78850
+## 35 35       18.615503         20.41392
+## 36 36       13.658570         19.99380
+## 37 37       12.461842         19.96647
+## 38 38        9.868033         20.08405
+## 39 39       30.095343         28.08818
+## 40 40       19.078406         22.81047
+## 41 41       21.858226         22.71523
+## 42 42       19.217488         23.38913
+```
+
+---
+
+## Extract values from vector data
+
+
+```r
+lidar_centroids &lt;- st_read('lidar_data.gpkg', quiet = TRUE) %&gt;%
+  st_transform(crs = 3043) %&gt;%
+  st_centroid() %&gt;%
+  vect()
+```
+
+```
+## Warning in st_centroid.sf(.): st_centroid assumes attributes are constant over geometries of x
+```
+
+```r
+terra::extract(lidar_raster, lidar_centroids, method = 'simple')
+```
+
+```
+##    ID lidar_ab_raster lidar_dbh_raster
+## 1   1       17.454269         20.25319
+## 2   2       20.164095         19.13410
+## 3   3             NaN              NaN
+## 4   4       14.875556         20.12202
+## 5   5       18.549231         29.85897
+## 6   6       14.612204         26.47458
+## 7   7       17.752705         23.13799
+## 8   8       19.885937         25.16281
+## 9   9       10.533671         20.75886
+## 10 10       22.389166         34.05958
+## 11 11       23.931147         24.90984
+## 12 12             NaN              NaN
+## 13 13             NaN              NaN
+## 14 14       22.744896         21.64656
+## 15 15       18.794941         16.31494
+## 16 16       10.836884         19.16870
+## 17 17        7.467778         19.36555
+## 18 18        9.388395         20.03333
+## 19 19       22.490761         21.45102
+## 20 20       17.353390         21.72068
+## 21 21       18.055882         16.30392
+## 22 22       11.907500         15.51000
+## 23 23        7.887486         15.95789
+## 24 24       11.758000         22.64229
+## 25 25       27.487383         22.64046
+## 26 26       18.656191         25.63789
+## 27 27             NaN              NaN
+## 28 28       23.654879         22.08018
+## 29 29       17.763916         21.41946
+## 30 30       13.135960         19.04050
+## 31 31             NaN              NaN
+## 32 32        7.660000         17.30000
+## 33 33             NaN              NaN
+## 34 34       13.662829         19.79283
+## 35 35       21.496237         18.84976
+## 36 36       13.104363         21.63054
+## 37 37             NaN              NaN
+## 38 38             NaN              NaN
+## 39 39       28.136074         28.62579
+## 40 40       21.756857         24.96229
+## 41 41       27.181440         24.65177
+## 42 42       13.852643         23.84898
+```
+
+---
+
+## Crop and mask
+
+
+```r
+lidar_raster_alt_camp &lt;- terra::crop(lidar_raster, lidar_data_terra[1,])
+plot(lidar_raster_alt_camp)
+```
+
+&lt;img src="raster_files/figure-html/raster_crop-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Crop and mask
+
+
+```r
+lidar_raster_alt_camp_masked &lt;-
+  terra::crop(lidar_raster, lidar_data_terra[1,], mask = TRUE)
+plot(lidar_raster_alt_camp_masked)
+```
+
+&lt;img src="raster_files/figure-html/raster_mask-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Raster algebra
+
+
+```r
+lidar_raster + c(1000, -1000)
+```
+
+```
+## class       : SpatRaster 
+## dimensions  : 660, 680, 2  (nrow, ncol, nlyr)
+## resolution  : 400, 400  (x, y)
+## extent      : 256000, 528000, 4488000, 4752000  (xmin, xmax, ymin, ymax)
+## coord. ref. : ETRS89 / UTM zone 31N (N-E) (EPSG:3043) 
+## source      : memory 
+## names       : lidar_ab_raster, lidar_dbh_raster 
+## min values  :        1000.840,         -990.438 
+## max values  :        1086.988,         -960.000
+```
+
+---
+
+## Raster algebra
+
+
+```r
+c(lidar_raster, lidar_ab_raster + lidar_dbh_raster)
+```
+
+```
+## class       : SpatRaster 
+## dimensions  : 660, 680, 3  (nrow, ncol, nlyr)
+## resolution  : 400, 400  (x, y)
+## extent      : 256000, 528000, 4488000, 4752000  (xmin, xmax, ymin, ymax)
+## coord. ref. : ETRS89 / UTM zone 31N (N-E) (EPSG:3043) 
+## sources     : memory  (2 layers) 
+##               memory  
+## names       : lidar_ab_raster, lidar_dbh_raster, lidar_ab_raster 
+## min values  :           0.840,            9.562,          16.400 
+## max values  :         86.9880,          40.0000,        122.4799
+```
+
+---
+
+## Pixels algebra
+
+
+```r
+global(lidar_raster, "mean", na.rm = TRUE)
+```
+
+```
+##                      mean
+## lidar_ab_raster  17.86761
+## lidar_dbh_raster 21.46871
+```
+
+---
+
+## Plot
+
+
+```r
+plot(lidar_raster, axes= FALSE, col = rainbow(25))
+```
+
+&lt;img src="raster_files/figure-html/raster_plot-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+## `stars` package
+
+
+```r
+install.packages('stars')
+```
+
+---
+
+## `stars` package
+
+
+```r
+library(stars)
+```
+
+```
+## Loading required package: abind
+```
+
+```r
+lidar_raster_stars &lt;- read_stars('lidar_raster.tif')
+lidar_raster_stars
+```
+
+```
+## stars object with 3 dimensions and 1 attribute
+## attribute(s):
+##                   Min. 1st Qu.  Median     Mean  3rd Qu.   Max.   NA's
+## lidar_raster.tif  0.84    15.8 19.8065 19.66816 23.28197 86.988 560210
+## dimension(s):
+##      from  to  offset delta                       refsys point                             values
+## x       1 680  256000   400 +proj=utm +zone=31 +ellps... FALSE                               NULL
+## y       1 660 4752000  -400 +proj=utm +zone=31 +ellps... FALSE                               NULL
+## band    1   2      NA    NA                           NA    NA lidar_ab_raster , lidar_dbh_raster
+##      x/y
+## x    [x]
+## y    [y]
+## band
+```
+
+---
+
+## Bands and attributes
+
+
+```r
+lidar_raster &lt;- split(lidar_raster_stars)
+```
+
+---
+
+## Bands and attributes
+
+
+```r
+merge(lidar_raster)
+```
+
+```
+## stars object with 3 dimensions and 1 attribute
+## attribute(s):
+##    Min. 1st Qu.  Median     Mean  3rd Qu.   Max.   NA's
+## X  0.84    15.8 19.8065 19.66816 23.28197 86.988 560210
+## dimension(s):
+##            from  to  offset delta                       refsys point
+## x             1 680  256000   400 +proj=utm +zone=31 +ellps... FALSE
+## y             1 660 4752000  -400 +proj=utm +zone=31 +ellps... FALSE
+## attributes    1   2      NA    NA                           NA    NA
+##                                        values x/y
+## x                                        NULL [x]
+## y                                        NULL [y]
+## attributes lidar_ab_raster , lidar_dbh_raster
+```
+
+---
+
+## Write stars objects
+
+
+```r
+write_stars(lidar_raster_stars, 'lidar_raster.nc')
+read_stars('lidar_raster.nc')
+```
+
+```
+## Band1, Band2,
+```
+
+```
+## stars object with 2 dimensions and 2 attributes
+## attribute(s):
+##         Min.  1st Qu.   Median     Mean  3rd Qu.   Max.   NA's
+## Band1  0.840 11.12243 16.66869 17.86761 22.80815 86.988 280105
+## Band2  9.562 18.82708 20.89650 21.46871 23.50256 40.000 280105
+## dimension(s):
+##   from  to  offset delta                       refsys point values x/y
+## x    1 680  256000   400 +proj=utm +zone=31 +ellps...    NA   NULL [x]
+## y    1 660 4752000  -400 +proj=utm +zone=31 +ellps...    NA   NULL [y]
+```
+
+---
+
+## CRS transformations
+
+
+```r
+st_crs(lidar_raster_stars)
+```
+
+```
+## Coordinate Reference System:
+##   User input: unknown 
+##   wkt:
+## PROJCRS["unknown",
+##     BASEGEOGCRS["unknown",
+##         DATUM["Unknown_based_on_GRS80_ellipsoid",
+##             ELLIPSOID["GRS 1980",6378137,298.257222101004,
+##                 LENGTHUNIT["metre",1],
+##                 ID["EPSG",7019]]],
+##         PRIMEM["Greenwich",0,
+##             ANGLEUNIT["degree",0.0174532925199433,
+##                 ID["EPSG",9122]]]],
+##     CONVERSION["Transverse Mercator",
+##         METHOD["Transverse Mercator",
+##             ID["EPSG",9807]],
+##         PARAMETER["Latitude of natural origin",0,
+##             ANGLEUNIT["degree",0.0174532925199433],
+##             ID["EPSG",8801]],
+##         PARAMETER["Longitude of natural origin",3,
+##             ANGLEUNIT["degree",0.0174532925199433],
+##             ID["EPSG",8802]],
+##         PARAMETER["Scale factor at natural origin",0.9996,
+##             SCALEUNIT["unity",1],
+##             ID["EPSG",8805]],
+##         PARAMETER["False easting",500000,
+##             LENGTHUNIT["metre",1],
+##             ID["EPSG",8806]],
+##         PARAMETER["False northing",0,
+##             LENGTHUNIT["metre",1],
+##             ID["EPSG",8807]]],
+##     CS[Cartesian,2],
+##         AXIS["easting",east,
+##             ORDER[1],
+##             LENGTHUNIT["metre",1,
+##                 ID["EPSG",9001]]],
+##         AXIS["northing",north,
+##             ORDER[2],
+##             LENGTHUNIT["metre",1,
+##                 ID["EPSG",9001]]]]
+```
+
+
+---
+
+## CRS transformations
+
+
+```r
+st_transform(lidar_raster_stars, crs = 3043)
+```
+
+```
+## stars object with 3 dimensions and 1 attribute
+## attribute(s):
+##                   Min. 1st Qu.  Median     Mean  3rd Qu.   Max.   NA's
+## lidar_raster.tif  0.84    15.8 19.8065 19.66816 23.28197 86.988 560210
+## dimension(s):
+##      from  to offset delta                      refsys point                             values x/y
+## x       1 680     NA    NA ETRS89 / UTM zone 31N (N-E) FALSE        [680x660] 256200,...,527800 [x]
+## y       1 660     NA    NA ETRS89 / UTM zone 31N (N-E) FALSE      [680x660] 4488200,...,4751800 [y]
+## band    1   2     NA    NA                          NA    NA lidar_ab_raster , lidar_dbh_raster    
+## curvilinear grid
+```
+
+```r
+lidar_raster_stars &lt;- st_warp(lidar_raster_stars, crs = 3043)
+```
+
+---
+
+## Aggregate / Dissaggregate
+
+
+```r
+reference_grid &lt;- st_as_stars(st_bbox(lidar_raster_stars), dx = 200, dy = 200)
+plot(st_warp(lidar_raster_stars, reference_grid))
+```
+
+```
+## downsample set to 3
+```
+
+&lt;img src="raster_files/figure-html/unnamed-chunk-1-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Aggregate / Dissaggregate
+
+
+```r
+reference_grid &lt;- st_as_stars(st_bbox(lidar_raster_stars), dx = 10000, dy = 10000)
+plot(st_warp(lidar_raster_stars, reference_grid))
+```
+
+&lt;img src="raster_files/figure-html/unnamed-chunk-2-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Extract values from vector data
+
+
+```r
+lidar_centroids &lt;- st_centroid(lidar_data_sf)
+```
+
+```
+## Warning in st_centroid.sf(lidar_data_sf): st_centroid assumes attributes are constant over
+## geometries of x
+```
+
+```r
+st_extract(lidar_raster_stars, lidar_centroids)
+```
+
+```
+## stars object with 2 dimensions and 1 attribute
+## attribute(s):
+##                       Min.  1st Qu.   Median     Mean  3rd Qu.     Max. NA's
+## lidar_raster.tif  7.467778 16.31219 19.95963 19.57132 22.66794 34.05958   16
+## dimension(s):
+##      from to offset delta                      refsys point
+## geom    1 42     NA    NA ETRS89 / UTM zone 31N (N-E)  TRUE
+## band    1  2     NA    NA                          NA    NA
+##                                                     values
+## geom POINT (358422.6 4576554),...,POINT (423874.9 4627749)
+## band                    lidar_ab_raster , lidar_dbh_raster
+```
+
+
+---
+
+## Extract values from vector data
+
+
+```r
+st_extract(lidar_raster_stars, lidar_centroids) %&gt;%
+  st_as_sf()
+```
+
+```
+## Simple feature collection with 42 features and 2 fields
+## Geometry type: POINT
+## Dimension:     XY
+## Bounding box:  xmin: 279185.7 ymin: 4504748 xmax: 505392.1 ymax: 4732649
+## Projected CRS: ETRS89 / UTM zone 31N (N-E)
+## First 10 features:
+##    lidar_ab_raster lidar_dbh_raster                     geom
+## 1         17.45427         20.25319 POINT (358422.6 4576554)
+## 2         20.16409         19.13410 POINT (496188.9 4683595)
+## 3               NA               NA POINT (391065.8 4582623)
+## 4         14.87556         20.12202 POINT (366720.8 4681336)
+## 5         18.54923         29.85897 POINT (321143.6 4706110)
+## 6         14.61220         26.47458 POINT (381909.9 4606116)
+## 7         17.75270         23.13799 POINT (400743.5 4626667)
+## 8         19.88594         25.16281 POINT (330797.4 4556041)
+## 9         10.53367         20.75886   POINT (294404 4523912)
+## 10        22.38917         34.05958 POINT (505392.1 4645040)
+```
+
+---
+
+## Extract values from vector data
+
+
+```r
+aggregate(lidar_raster_stars, lidar_data_sf[1,], mean, na.rm = TRUE) %&gt;%
+  st_as_sf()
+```
+
+```
+## Simple feature collection with 1 feature and 2 fields
+## Geometry type: MULTIPOLYGON
+## Dimension:     XY
+## Bounding box:  xmin: 336192.8 ymin: 4562380 xmax: 377678.6 ymax: 4593064
+## Projected CRS: ETRS89 / UTM zone 31N (N-E)
+##   lidar_ab_raster lidar_dbh_raster                           geom
+## 1        15.24602         19.97279 MULTIPOLYGON (((374342.1 45...
+```
+
+---
+
+## Crop
+
+
+```r
+plot(st_crop(lidar_raster_stars, lidar_data_sf[1,]))
+```
+
+&lt;img src="raster_files/figure-html/stars_crop-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Raster algebra
+
+
+```r
+lidar_raster_stars*5
+```
+
+```
+## stars object with 3 dimensions and 1 attribute
+## attribute(s):
+##                   Min. 1st Qu.  Median     Mean  3rd Qu.   Max.   NA's
+## lidar_raster.tif   4.2      79 99.0325 98.34081 116.4098 434.94 560210
+## dimension(s):
+##      from  to  offset delta                      refsys point                             values
+## x       1 680  256000   400 ETRS89 / UTM zone 31N (N-E)    NA                               NULL
+## y       1 660 4752000  -400 ETRS89 / UTM zone 31N (N-E)    NA                               NULL
+## band    1   2      NA    NA                          NA    NA lidar_ab_raster , lidar_dbh_raster
+##      x/y
+## x    [x]
+## y    [y]
+## band
+```
+
+
+---
+
+## ggplot2
+
+
+```r
+library(ggplot2)
+ab_stars &lt;- slice(lidar_raster_stars, band, 1)
+ggplot() +
+  geom_stars(data = ab_stars) +
+  scale_fill_fermenter(palette = 2, direction = 1, type = 'seq', na.value = 'transparent')
+```
+
+&lt;img src="raster_files/figure-html/stars_ggplot-1.png" style="display: block; margin: auto;" /&gt;
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
