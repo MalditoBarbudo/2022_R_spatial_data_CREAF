@@ -1,12 +1,12 @@
 ---
-title: "Vector Data"
-subtitle: "Simple Features"
+title: "Raster Data"
+subtitle: ""
 author: "Víctor Granda"
 institute: "Ecosystem Modelling Facility, CREAF"
-date: "2022/03/14"
+date: "2022/03/15"
 output:
   xaringan::moon_reader:
-    css: [default, resources/css/custom.css, default-fonts]
+    css: [resources/css/custom.css, default-fonts]
     lib_dir: libs
     nature:
       highlightStyle: github
@@ -27,15 +27,16 @@ knitr::opts_chunk$set(fig.width = 8, fig.height = 5, fig.align = 'center')
 ```
 
 
-# Vector data
+# Raster data
 
 ## Víctor Granda
 
 ### Ecosystem Modelling Facility
 
-### 14/03/2022
+### 15/03/2022
 
 <img class="logo-title" src="resources/img/emf_logo.svg" width=300>
+
 
 ---
 
@@ -46,573 +47,331 @@ layout: true
     <img class="emf-logo" src="resources/img/emf_logo.svg">
 </div>
 
-# Simple features (sf)
+# Raster data
 
 <div class=my-footer></div>
 
 ---
 
-.center[
-```{r sf_package, echo = FALSE, out.width = 400}
-knitr::include_graphics("resources/img/sf_allison_horst.jpg")
-```
-]
+Raster data consist of a matrix of pixels (or cells) organized into rows and
+columns (also know as grid), where each pixel contains a value representing
+information (such an attribute like in the simple features, i.e. biomass).
 
-.right[
-.font80[(Illustration (c) by Allison Horst)]
-]
-
-Simple features are included in the [ISO 19125-1:2004](https://www.iso.org/standard/40114.html)
-standard. This standard decribes how real world objects are represented in computers, with
-special emphasis in spatial geometry.
 
 ---
 
-## Dimensions
+## R packages
 
-Geometries are composed of points, coordinates in XY space (north-east, lat-long...):
+There are several packages to work with raster data:
 
-  - **XY**
-  - **XYZ** (Z = altitude)
-  - **XYM** (M = coordinate referring to the point, could be time or coordinates measuring error)
-  - **XYZM** (both, Z and M)
-
-And also can have attributes related to each geometry (think about things as
-biomass, temperature...)
-
----
-
-## Geometry types
-
-  - **POINT**: zero-dimensional geometry containing a single point
-  - **LINESTRING**: sequence of points connected by straight, non-self intersecting
-  line pieces; one-dimensional geometry
-  - **POLYGON**: geometry with a positive area (two-dimensional); sequence of points
-  form a closed, non-self intersecting ring; the first ring denotes the exterior
-  ring, zero or more subsequent rings denote holes in this exterior ring
-  - **MULTIPOINT**: set of points; a MULTIPOINT is simple if no two Points in the
-  MULTIPOINT are equal
-  - **MULTILINESTRING**: set of linestrings
-  - **MULTIPOLYGON**: set of polygons
-  - **GEOMETRYCOLLECTION**: set of geometries of any type except GEOMETRYCOLLECTION
+  - `raster`: original and old standard to work with raster data in R.
+  - `terra`: modern standard to work with raster data in R.
+  - `stars`: work with raster, and also datacubes (more than 3 dimensions).
+  
+In this session we will explore the `terra` package, as it has most of the
+most common tools to work with raster data implemented, as well as a nice
+online documentation (https://rspatial.org/terra/pkg/index.html)
 
 ---
 
-## Simple features in R
+## `terra` package
 
-1. "Ol'good" `sp` package. The standard in R for many years
-
-2. "New kid on the block" `sf` package. The "new" R standard for spatial simple
-features.
-
----
-
-## `sf` package
-
-```{r install_sf, eval = FALSE}
-install.packages("sf")
+```{r terra_inst, eval=FALSE}
+install.package(terra)
 ```
 
 ---
 
-## `sf` package
+## Read data
 
-```{r sf_simple_example}
-library(sf)
-
-nc <- st_read(system.file("shape/nc.shp", package="sf"))
-```
-
----
-
-## `sf` package
-
-```{r sf_simple_example_2}
-nc
-```
-
----
-
-## `sf` package
-
-```{r sf_simple_example_3}
-class(nc)
-
-attr(nc, "sf_column")
-
-class(nc$geometry)
-
-class(nc$geometry[[1]])
-```
-
----
-
-## read data
-
-```{r st_read}
-lidar_data <- st_read('lidar_data.gpkg', quiet = TRUE)
-
-lidar_data
-```
-
----
-
-## quickly plot
-
-```{r quick_plot}
-plot(lidar_data)
-```
-
----
-
-## it's a dataframe (tibble)!!!
-
-```{r filter}
+```{r terra_read}
+library(terra)
 library(dplyr)
-valles_data <- lidar_data %>%
-  filter(poly_id == "Vallès Occidental")
-valles_data
+
+lidar_ab_raster <- rast('lidar_ab_raster.tif')
+lidar_ab_raster
 ```
 
 ---
 
-## save it
+## Layers
 
-```{r, echo=FALSE}
-invisible(file.remove('valles_data.gpkg'))
-```
-
-
-```{r write}
-st_write(valles_data, 'valles_data.gpkg')
-file.exists('valles_data.gpkg')
+```{r terra_layers}
+lidar_dbh_raster <- rast('lidar_dbh_raster.tif')
+lidar_raster <- c(lidar_ab_raster, lidar_dbh_raster)
+lidar_raster
 ```
 
 ---
 
-## Back to read, but with a twist
+## Write data
 
-```{r read_limited}
-valles_wkt <- st_read('valles_data.gpkg', quiet = TRUE) %>%
-  st_geometry() %>%
-  st_as_text()
-
-valles_data_2 <- st_read('lidar_data.gpkg', wkt_filter = valles_wkt, quiet = TRUE)
-valles_data_2
+```{r terra_write}
+writeRaster(lidar_raster, 'lidar_raster.tif', overwrite = TRUE)
+rast('lidar_raster.tif')
 ```
 
 ---
 
-## Coordinate Reference System (crs)
+## CRS
 
 CRS is a framework used to precisely measure locations on the surface of the
 Earth as coordinates.
 
-
-```{r crs}
-st_crs(lidar_data)
+```{r terra_crs}
+crs(lidar_raster)
 ```
 
 ---
 
-## CRS transformations
+## transform CRS
 
-```{r transform}
-lidar_data_utm <- st_transform(lidar_data, crs = 3043)
-st_crs(lidar_data_utm)
+```{r terra_crs_2}
+lidar_raster <- terra::project(lidar_raster, 'epsg:3043')
+lidar_raster
 ```
 
 ---
 
-## CRS transformations
-
-```{r transform_2}
-valles_data_utm <- st_transform(valles_data, crs = st_crs(lidar_data_utm))
-st_crs(valles_data_utm)
-```
-
----
-
-## Geometrical operations
-
-```{r centroids}
-lidar_centroids <- st_centroid(lidar_data)
-lidar_centroids
-```
-
----
-
-## Geometrical operations
-
-```{r distance}
-st_distance(lidar_centroids)
-```
-
----
-
-## Geometrical operations
-
-```{r distance_2}
-st_distance(lidar_centroids[1,], lidar_centroids[42,])
-```
-
----
-
-## Geometrical operations
-
-```{r intersects}
-st_intersects(lidar_centroids, lidar_data)
-```
-
----
-
-## Geometrical operations
-
-```{r intersects_2}
-st_intersects(lidar_centroids, lidar_data, sparse = FALSE)
-```
-
----
-
-## Geometrical operations
-
-  - `st_intersects`
-  - `st_touches`
-  - `st_within`
-  - `st_contains`
-  - `st_overlaps`
-  - `st_covers`
-  - ...
-
-All these returns a matrix (sparse or not) with all comparisions
-
----
-
-## Geometrical operations
-
-```{r buffer}
-st_buffer(lidar_centroids, 1000)
-```
-
----
-
-## Geometrical operations
-
-```{r convex_hull}
-convex_hull_counties <- st_convex_hull(lidar_data)
-convex_hull_counties
-```
-
----
-
-## Geometrical operations
-
-```{r convex_hull_2}
-plot(convex_hull_counties)
-```
-
----
-
-## Geometrical operations
-
-```{r union}
-lidar_centroids_multipoint <- st_union(lidar_centroids)
-lidar_centroids_multipoint
-```
-
----
-
-## Geometrical operations
-
-```{r convex_hull_3}
-convex_hull_centroids <- st_convex_hull(lidar_centroids_multipoint)
-plot(convex_hull_centroids)
-plot(lidar_centroids, add = TRUE)
-```
-
-
----
-
-## Geometrical operations
-
-```{r triangulate}
-# error
-st_triangulate(lidar_centroids)
-```
-
----
-
-## Geometrical operations
-
-```{r triangulate_2}
-# no error, but maybe lat long is not the perfect here
-st_triangulate(lidar_centroids_multipoint)
-```
-
----
-
-## Geometrical operations
-
-```{r triangulate_3}
-# utm works fine
-lidar_centroids_multipoint %>%
-  st_transform(crs = 3043) %>%
-  st_triangulate()
-```
-
----
-
-## Geometrical operations
-
-```{r triangulate_4}
-# ummm, no plot???
-lidar_centroids_multipoint %>%
-  st_transform(crs = 3043) %>%
-  st_triangulate() %>%
-  plot()
-```
-
----
-
-## Geometrical operations
-
-```{r triangulate_5}
-# ahh, we need to extract the collection, to be able to plot correctly
-lidar_centroids_multipoint %>%
-  st_transform(crs = 3043) %>%
-  st_triangulate() %>%
-  st_collection_extract() %>%
-  plot()
-```
-
----
-
-## Geometrical operations
-
-```{r voronoi}
-# Is the same for voronoi polygons
-lidar_centroids_multipoint %>%
-  st_transform(crs = 3043) %>%
-  st_voronoi() %>%
-  st_collection_extract() %>%
-  plot()
-```
-
-
----
-
-## Valid geometries
-
-```{r valid}
-sleeve_polygon <- st_polygon(list(cbind(c(0,1,1,1,0,0),c(0,0,1,0.6,1,0))))
-cross_polygon <- st_polygon(list(cbind(c(0,1,0,1,0),c(0,1,1,0,0))))
-st_is_valid(sleeve_polygon)
-st_is_valid(cross_polygon)
-st_is_valid(lidar_data[1,])
-```
-
----
-
-## Valid geometries
-
-```{r valid2}
-valid_sleeve_polygon <- st_make_valid(sleeve_polygon)
-valid_cross_polygon <- st_make_valid(cross_polygon)
-st_is_valid(valid_sleeve_polygon)
-st_is_valid(valid_cross_polygon)
-```
-
----
-
-## Valid geometries
+## Aggregate / Dissaggregate
 
 .pull-left[
 
-Invalid:
+Aggregate (less resolution = bigger pixel)
 
-```{r, echo = FALSE, fig.height=4}
-plot(sleeve_polygon)
-plot(sf::st_cast(sleeve_polygon, 'MULTIPOINT'), add = TRUE)
-plot(cross_polygon)
-plot(sf::st_cast(cross_polygon, 'MULTIPOINT'), add = TRUE)
+```{r raster_aggregate}
+terra::aggregate(lidar_raster, fact = 2, fun = 'max')
 ```
+
 ]
 
 .pull-right[
 
-Valid:
+Dissaggregate (more resolution = smaller pixel)
 
-```{r, echo = FALSE, fig.height=4}
-plot(valid_sleeve_polygon)
-plot(sf::st_cast(st_collection_extract(valid_sleeve_polygon), 'MULTIPOINT'), add = TRUE)
-plot(valid_cross_polygon)
-plot(sf::st_cast(valid_cross_polygon, 'MULTIPOINT'), add = TRUE)
+```{r raster_dissaggregate}
+terra::disagg(lidar_raster, fact = 2, method = 'bilinear')
 ```
+
 ]
 
 ---
 
-## Subsetting features
+## Extract values from vector data
 
-```{r subsetting}
-lidar_data[1, "AB_average"]
+```{r raster_load_vector}
+library(sf)
+lidar_data_sf <- st_read('lidar_data.gpkg', quiet = TRUE) %>%
+  st_transform(crs = 3043)
+lidar_data_terra <- vect(lidar_data_sf)
+lidar_data_terra
 ```
 
 ---
 
-## Subsetting features
+## Extract values from vector data
 
-```{r subsetting_2}
-lidar_data[1, "AB_average", drop = TRUE]
+```{r raster_extract_vector}
+terra::extract(lidar_raster, lidar_data_terra, mean, na.rm = TRUE)
 ```
 
 ---
 
-## Subsetting features
+## Extract values from vector data
 
-```{r subsetting_3}
-lidar_data[valles_data,]
+```{r raster_extract_vector_2}
+lidar_centroids <- st_read('lidar_data.gpkg', quiet = TRUE) %>%
+  st_transform(crs = 3043) %>%
+  st_centroid() %>%
+  vect()
+terra::extract(lidar_raster, lidar_centroids, method = 'simple')
 ```
 
 ---
 
-## Subsetting features
+## Crop and mask
 
-```{r subsetting_4}
-lidar_data[valles_data, , op = st_contains]
+```{r raster_crop}
+lidar_raster_alt_camp <- terra::crop(lidar_raster, lidar_data_terra[1,])
+plot(lidar_raster_alt_camp)
 ```
 
 ---
 
-## Subsetting features
+## Crop and mask
 
-```{r subsetting_5}
-lidar_data %>%
-  filter(lengths(st_contains(., valles_data)) > 0)
+```{r raster_mask}
+lidar_raster_alt_camp_masked <-
+  terra::crop(lidar_raster, lidar_data_terra[1,], mask = TRUE)
+plot(lidar_raster_alt_camp_masked)
 ```
 
 ---
 
-## Joining feature sets
+## Raster algebra
 
-```{r ifn_ab}
-ifn_ab <- st_read('ifn_data.gpkg', quiet = TRUE) %>%
-  as.data.frame() %>%
-  select(admin_region, basal_area_mean, -geom)
-ifn_ab
+```{r raster_algebra}
+lidar_raster + c(1000, -1000)
 ```
 
 ---
 
-## Joining feature sets
+## Raster algebra
 
-By attributes
-
-```{r attribute_join}
-left_join(lidar_data, ifn_ab, by = c("poly_id" = "admin_region"))
+```{r raster_algebra_2}
+c(lidar_raster, lidar_ab_raster + lidar_dbh_raster)
 ```
 
 ---
 
-## Joining feature sets
+## Pixels algebra
 
-By attributes
-
-```{r attribute_join_2}
-left_join(lidar_data, ifn_ab, by = c("poly_id" = "admin_region")) %>%
-  select(poly_id, AB_lidar = AB_average, AB_ifn = basal_area_mean) %>%
-  mutate(difference = AB_ifn - AB_lidar)
+```{r raster_algebra_3}
+global(lidar_raster, "mean", na.rm = TRUE)
 ```
 
 ---
 
-## Joining fetarure sets
+## Plot
 
-By geometries
-
-```{r geometry_join}
-ifn_data <- st_read('ifn_data.gpkg', quiet = TRUE) %>%
-  select(admin_region, basal_area_mean)
-
-ifn_data
+```{r raster_plot}
+plot(lidar_raster, axes= FALSE, col = rainbow(25))
 ```
 
 ---
 
-## Joining fetarure sets
+## `stars` package
 
-By geometries
-
-```{r geometry_join_2}
-st_join(lidar_data, ifn_data, join = st_intersects)
+```{r stars_package, eval = FALSE}
+install.packages('stars')
 ```
 
 ---
 
-## Joining fetarure sets
+## `stars` package
 
-By geometries
-
-```{r geometry_join_3}
-st_join(lidar_data, st_centroid(ifn_data), join = st_intersects)
+```{r stars_read}
+library(stars)
+lidar_raster_stars <- read_stars('lidar_raster.tif')
+lidar_raster_stars
 ```
 
 ---
 
-## Plotting
+## Bands and attributes
 
-```{r plotting}
-plot(lidar_data)
+```{r split_stars}
+lidar_raster <- split(lidar_raster_stars)
 ```
 
 ---
 
-## Plotting
+## Bands and attributes
 
-```{r plotting_2}
-plot(lidar_data, max.plot = 2)
+```{r merge_stars}
+merge(lidar_raster)
 ```
 
 ---
 
-## Plotting
+## Write stars objects
 
-```{r plotting_3}
-plot(lidar_data[, "AB_average"], axes = TRUE)
+```{r write_stars}
+write_stars(lidar_raster_stars, 'lidar_raster.nc')
+read_stars('lidar_raster.nc')
 ```
 
 ---
 
-## Plotting
+## CRS transformations
 
-```{r plotting_4}
-plot(lidar_data[, "AB_average"], axes = TRUE, key.pos = 4)
+```{r crs_stars}
+st_crs(lidar_raster_stars)
+```
+
+
+---
+
+## CRS transformations
+
+```{r crs_transform_stars}
+st_transform(lidar_raster_stars, crs = 3043)
+lidar_raster_stars <- st_warp(lidar_raster_stars, crs = 3043)
 ```
 
 ---
 
-## Plotting
+## Aggregate / Dissaggregate
 
-```{r plotting_5}
-plot(lidar_data[, "AB_average"], axes = TRUE, key.pos = 4, graticule = TRUE)
+```{r}
+reference_grid <- st_as_stars(st_bbox(lidar_raster_stars), dx = 200, dy = 200)
+plot(st_warp(lidar_raster_stars, reference_grid))
 ```
 
 ---
 
-## Plotting
+## Aggregate / Dissaggregate
 
-```{r plotting_6}
-plot(lidar_data[, "AB_average"], axes = TRUE, key.pos = 4, graticule = TRUE, breaks = c(0, 15, 20, 40))
+```{r}
+reference_grid <- st_as_stars(st_bbox(lidar_raster_stars), dx = 10000, dy = 10000)
+plot(st_warp(lidar_raster_stars, reference_grid))
 ```
+
+---
+
+## Extract values from vector data
+
+```{r stars_vector}
+lidar_centroids <- st_centroid(lidar_data_sf)
+
+st_extract(lidar_raster_stars, lidar_centroids)
+```
+
+
+---
+
+## Extract values from vector data
+
+```{r stars_vector_2}
+st_extract(lidar_raster_stars, lidar_centroids) %>%
+  st_as_sf()
+```
+
+---
+
+## Extract values from vector data
+
+```{r stars_vector_3}
+aggregate(lidar_raster_stars, lidar_data_sf[1,], mean, na.rm = TRUE) %>%
+  st_as_sf()
+```
+
+---
+
+## Crop
+
+```{r stars_crop}
+plot(st_crop(lidar_raster_stars, lidar_data_sf[1,]))
+```
+
+---
+
+## Raster algebra
+
+```{r stars_algebra}
+lidar_raster_stars*5
+```
+
 
 ---
 
 ## ggplot2
 
-```{r ggplot}
+```{r stars_ggplot}
 library(ggplot2)
-lidar_data %>%
-  ggplot() +
-  geom_sf(aes(fill = AB_average)) +
-  scale_fill_fermenter(palette = 2, direction = 1, type = 'div')
+ab_stars <- slice(lidar_raster_stars, band, 1)
+ggplot() +
+  geom_stars(data = ab_stars) +
+  scale_fill_fermenter(palette = 2, direction = 1, type = 'seq', na.value = 'transparent')
 ```
+
